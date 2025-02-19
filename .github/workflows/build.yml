@@ -67,6 +67,9 @@ jobs:
       # Whether to enable KernelSU ExtPatch
       ENABLE_KERNELSU_ExtPatch: ${{ matrix.CONFIG.enableKernelSUExtPatch }}
 
+      # Whether to enable KernelSU-NEXT
+      ENABLE_KERNELSU_NEXT: ${{ matrix.CONFIG.enableKernelSU-next }}
+
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
 
@@ -266,6 +269,28 @@ jobs:
           echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
+      - name: 😋 Setup KernelSU-NEXT
+        working-directory: ${{ env.KERNEL_NAME }}
+        env:
+          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+        if: ${{ env.ENABLE_KERNELSU_NEXT == 'true' }}
+        run: |
+          # Delete old KernelSU
+          if [ -d "./KernelSU" ]; then
+            rm -rf "./KernelSU"
+          fi
+          if [ -d "./drivers/kernelsu" ]; then
+            rm -rf "./drivers/kernelsu"
+          fi
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+
+          echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          
+          cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
       - name: 😋 Setup KernelSU Ext Patch
         working-directory: ${{ env.KERNEL_NAME }}
         #if: false

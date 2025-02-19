@@ -41,7 +41,8 @@
               "branch": "k40"
             }
           },
-          "enableKernelSU": true, 
+          "enableKernelSU": false, 
+          "enableKernelSU-next": true,
           "enableKernelSUExtPatch": true,
           "enableLXC": true        
     }
