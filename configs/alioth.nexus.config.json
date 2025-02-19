@@ -1,15 +1,15 @@
 [
     {
         "kernelSource": { 
-            "name": "k60-evolutionX", 
-            "repo": "https://github.com/Evolution-X-Devices/kernel_xiaomi_sm8475", 
-            "branch": "udc", 
-            "device": "mondrian", 
-            "defconfig": "vendor/mondrian_defconfig" 
+            "name": "k40-RealKing", 
+            "repo": "https://github.com/projects-nexus/nexus_kernel_xiaomi_sm8250", 
+            "branch": "stable", 
+            "device": "alioth", 
+            "defconfig": "alioth_defconfig" 
           }, 
           "toolchains": [ 
             {  
-               "url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master/clang-r522817.tar.gz",  
+               "url": "https://github.com/ZyCromerZ/Clang/releases/download/17.0.0-20230725-release/Clang-17.0.0-20230725.tar.gz",  
                "name": "clang",  
                "binaryEnv": [
                 "bin"
@@ -37,12 +37,12 @@
             "use": true, 
             "release": true,
             "custom": {
-              "repo": "https://github.com/luyanci/Ak3",
-              "branch": "k60"
+              "repo": "https://github.com/luyanci/AnyKernel3",
+              "branch": "k40"
             }
           },
           "enableKernelSU": true, 
-          "enableKernelSUExtPatch": false,
-          "enableLXC": false        
+          "enableKernelSUExtPatch": true,
+          "enableLXC": true        
     }
 ]
