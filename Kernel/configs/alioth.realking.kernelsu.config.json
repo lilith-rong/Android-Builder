@@ -1,9 +1,9 @@
 [
     {
         "kernelSource": { 
-            "name": "k40-nexus-kernelsu", 
-            "repo": "https://github.com/projects-nexus/nexus_kernel_xiaomi_sm8250", 
-            "branch": "stable", 
+            "name": "k40-RealKing-kernelsu", 
+            "repo": "https://github.com/Rohail33/Realking_kernel_sm8250", 
+            "branch": "base", 
             "device": "alioth", 
             "defconfig": "alioth_defconfig" 
           }, 
