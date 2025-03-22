@@ -330,13 +330,24 @@ jobs:
         run: |
           # Add Patch to kernel before 5.9
           # 下面这一条可以让我正确编译 git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/path_umount.patch
+          git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/path_umount.patch
           # git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/get_cred_rcu.patch #not work
           # sed -i '260 r ${{ env.WORKSPACE }}/Kernel/Patch/get_cred_rcu.h' ./include/linux/cred.h
           # sed -i 's/atomic_inc_not_zero(&((struct cred \*)cred)->usage)/get_cred_rcu(cred)/g' ./kernel/cred.c
           # 新的patch
-          cp ${{ env.WORKSPACE }}/Kernel/Patch/add-auto-backport.patch ./KernelSU
-          cd ./KernelSU
-          patch -p1 --forward < add-auto-backport.patch || true
+          # 检查环境变量并设置目录
+          # if [ "${{ env.ENABLE_KERNELSU }}" = 'true' ]; then
+          #     KERNELSU_DIR="KernelSU"
+          # elif [ "${{ env.ENABLE_KERNELSU_NEXT }}" = 'true' ]; then
+          #     KERNELSU_DIR="KernelSU-Next"
+          # else
+          #     echo "ERROR: No valid KernelSU version selected"
+          #     exit 1
+          # fi
+          # # 执行补丁操作
+          # cp "${{ env.WORKSPACE }}/Kernel/Patch/add-auto-backport.patch" "./${KERNELSU_DIR}/"
+          # cd "./${KERNELSU_DIR}" || exit 1
+          # patch -p1 --forward < add-auto-backport.patch || true
 
       - name: 👍 Start building the kernel
         working-directory: ${{ env.KERNEL_NAME }}
