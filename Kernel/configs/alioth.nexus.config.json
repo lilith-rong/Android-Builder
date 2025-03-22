@@ -1,7 +1,7 @@
 [
     {
         "kernelSource": { 
-            "name": "k40-pixelos-nexus", 
+            "name": "k40-nexus-kernelsu-next", 
             "repo": "https://github.com/projects-nexus/nexus_kernel_xiaomi_sm8250", 
             "branch": "stable", 
             "device": "alioth", 
