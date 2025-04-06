@@ -22,8 +22,7 @@
             "CC": "clang/bin/clang", 
             "externalCommands": { 
               "CROSS_COMPILE": "aarch64-linux-gnu- Image.gz-dtb", 
-              // "CROSS_COMPILE_ARM32": "arm-linux-gnueabi- Image.gz-dtb", 
-              "CROSS_COMPILE_ARM32": "arm-linux-gnueabi-", 
+              "CROSS_COMPILE_ARM32": "arm-linux-gnueabi- Image.gz-dtb", 
               "AS": "clang/bin/llvm-as", 
               "AR": "clang/bin/llvm-ar",  
               "NM":"clang/bin/llvm-nm" ,  
