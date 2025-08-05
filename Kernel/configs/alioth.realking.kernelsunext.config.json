@@ -43,6 +43,7 @@
           },
           "enableKernelSU": false, 
           "enableKernelSU-next": true,
+          "enableSukiSU-Ultra": false,
           "enableCcache": true,
           "enableLXC": true        
     }

@@ -66,10 +66,13 @@ jobs:
       CONFIRM_RELEASE: ${{ matrix.CONFIG.AnyKernel3.release }}
 
       # Whether to enable KernelSU
-      ENABLE_KERNELSU: ${{ matrix.CONFIG.enableKernelSU-next && 'false' || matrix.CONFIG.enableKernelSU }}
+      ENABLE_KERNELSU: ${{ matrix.CONFIG.enableKernelSU }}
 
       # Whether to enable KernelSU-NEXT
       ENABLE_KERNELSU_NEXT: ${{ matrix.CONFIG.enableKernelSU-next }}
+
+      # Whether to enable SukiSU-Ultra
+      ENABLE_SUKISU_ULTRA: ${{ matrix.CONFIG.enableSukiSU-Ultra }}
 
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
@@ -283,6 +286,27 @@ jobs:
           echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
+      - name: 😋 Setup SukiSU-Ultra
+        working-directory: ${{ env.ENABLE_SUKISU_ULTRA }}
+        env:
+          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+        if: ${{ env.ENABLE_SUKISU_ULTRA == 'true' }}
+        run: |
+          # Delete old KernelSU
+          if [ -d "./KernelSU-Next" ]; then
+            rm -rf "./KernelSU-Next"
+          fi
+          if [ -d "./drivers/kernelsu" ]; then
+            rm -rf "./drivers/kernelsu"
+          fi
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
+
+          echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          
+#          cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
       - name: 😋 Setup LXC docker
         working-directory: ${{ env.KERNEL_NAME }}
