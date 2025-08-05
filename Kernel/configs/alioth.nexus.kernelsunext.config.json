@@ -1,9 +1,9 @@
 [
     {
         "kernelSource": { 
-            "name": "k40-RealKing-kernelsu-next", 
-            "repo": "https://github.com/Rohail33/Realking_kernel_sm8250", 
-            "branch": "base", 
+            "name": "k40-nexus-kernelsu-next", 
+            "repo": "https://github.com/projects-nexus/nexus_kernel_xiaomi_sm8250", 
+            "branch": "stable", 
             "device": "alioth", 
             "defconfig": "alioth_defconfig" 
           }, 
@@ -21,8 +21,8 @@
             "ARCH": "arm64", 
             "CC": "clang/bin/clang", 
             "externalCommands": { 
-              "CROSS_COMPILE": "aarch64-linux-gnu-", 
-              "CROSS_COMPILE_ARM32": "arm-linux-gnueabi-", 
+              "CROSS_COMPILE": "aarch64-linux-gnu- Image.gz-dtb", 
+              "CROSS_COMPILE_ARM32": "arm-linux-gnueabi- Image.gz-dtb", 
               "AS": "clang/bin/llvm-as", 
               "AR": "clang/bin/llvm-ar",  
               "NM":"clang/bin/llvm-nm" ,  
@@ -43,7 +43,7 @@
           },
           "enableKernelSU": false, 
           "enableKernelSU-next": true,
-          "enableKernelSUExtPatch": false,
+		  "enableSukiSU-Ultra": false,
           "enableCcache": true,
           "enableLXC": true        
     }

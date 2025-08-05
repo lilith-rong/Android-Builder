@@ -67,12 +67,12 @@ jobs:
 
       # Whether to enable KernelSU
       ENABLE_KERNELSU: ${{ matrix.CONFIG.enableKernelSU-next && 'false' || matrix.CONFIG.enableKernelSU }}
-
-      # Whether to enable KernelSU ExtPatch
-      ENABLE_KERNELSU_ExtPatch: ${{ matrix.CONFIG.enableKernelSUExtPatch }}
       
       # Whether to enable KernelSU-NEXT
       ENABLE_KERNELSU_NEXT: ${{ matrix.CONFIG.enableKernelSU-next }}
+
+      # Whether to enable SukiSU-Ultra
+      ENABLE_SUKISU_ULTRA: ${{ matrix.CONFIG.enableSukiSU-Ultra }}
 
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
@@ -268,8 +268,8 @@ jobs:
           # Apply new KernelSU patches
           # curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
           # Change to rsuntk KernelSU or ShirkNeko KernelSU的susfs-dev分支
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s main
-          # curl -LSs "https://raw.githubusercontent.com/ShirkNeko/KernelSU/main/kernel/setup.sh" | bash -s susfs-dev
+          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-main
+          # curl -LSs "https://raw.githubusercontent.com/ShirkNeko/KernelSU/main/kernel/setup.sh" | bash -s susfs-stable
 
           echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
@@ -298,31 +298,30 @@ jobs:
           
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
-      - name: 😋 Setup KernelSU Ext Patch
-        working-directory: ${{ env.KERNEL_NAME }}
-        #if: false
-        if: ${{ (env.ENABLE_KERNELSU_ExtPatch == 'true' && env.ENABLE_KERNELSU == 'true') || (env.ENABLE_KERNELSU_ExtPatch == 'true' && env.ENABLE_KERNELSU_NEXT == 'true') }}
+
+
+      - name: 😋 Setup SukiSU-Ultra
+        working-directory: ${{ env.ENABLE_SUKISU_ULTRA }}
+        env:
+          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+        if: ${{ env.ENABLE_SUKISU_ULTRA == 'true' }}
         run: |
-          # Add Patch to kernel before 5.9
-          # 下面这一条可以让我正确编译 git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/path_umount.patch
-          git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/path_umount.patch
-          # git am -s < ${{ env.WORKSPACE }}/Kernel/Patch/get_cred_rcu.patch #not work
-          # sed -i '260 r ${{ env.WORKSPACE }}/Kernel/Patch/get_cred_rcu.h' ./include/linux/cred.h
-          # sed -i 's/atomic_inc_not_zero(&((struct cred \*)cred)->usage)/get_cred_rcu(cred)/g' ./kernel/cred.c
-          # 新的patch
-          # 检查环境变量并设置目录
-          # if [ "${{ env.ENABLE_KERNELSU }}" = 'true' ]; then
-          #     KERNELSU_DIR="KernelSU"
-          # elif [ "${{ env.ENABLE_KERNELSU_NEXT }}" = 'true' ]; then
-          #     KERNELSU_DIR="KernelSU-Next"
-          # else
-          #     echo "ERROR: No valid KernelSU version selected"
-          #     exit 1
-          # fi
-          # 执行补丁操作
-          # cp "${{ env.WORKSPACE }}/Kernel/Patch/add-auto-backport.patch" "./${KERNELSU_DIR}/"
-          # cd "./${KERNELSU_DIR}" || exit 1
-          # patch -p1 --forward < add-auto-backport.patch || true
+          # Delete old KernelSU
+          if [ -d "./KernelSU-Next" ]; then
+            rm -rf "./KernelSU-Next"
+          fi
+          if [ -d "./drivers/kernelsu" ]; then
+            rm -rf "./drivers/kernelsu"
+          fi
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
+
+          echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          
+          cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
+
 
       - name: 😋 Setup LXC docker
         working-directory: ${{ env.KERNEL_NAME }}
