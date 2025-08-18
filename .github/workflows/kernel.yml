@@ -74,6 +74,9 @@ jobs:
       # Whether to enable SukiSU-Ultra
       ENABLE_SUKISU_ULTRA: ${{ matrix.CONFIG.enableSukiSU-Ultra }}
 
+      # Whether to enable KernelSU ExtPatch
+      ENABLE_KERNELSU_ExtPatch: ${{ matrix.CONFIG.enableKernelSUExtPatch }}
+
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
 
@@ -321,6 +324,15 @@ jobs:
           echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
+      - name: 😋 Setup KernelSU Ext Patch
+        working-directory: ${{ env.KERNEL_NAME }}
+        if: true
+        #if: ${{ env.ENABLE_KERNELSU == 'true' &&       env.ENABLE_KERNELSU_ExtPatch == 'true'}}
+        run: |
+          wget -Opatcher https://github.com/luyanci/Android-kernel-utils/releases/download/v0.1/patcher-2204
+          chmod +x patcher
+          ./patcher
 
       - name: 😋 Setup LXC docker
         working-directory: ${{ env.KERNEL_NAME }}
