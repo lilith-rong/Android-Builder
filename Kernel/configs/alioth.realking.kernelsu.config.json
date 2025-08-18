@@ -1,7 +1,7 @@
 [
     {
         "kernelSource": { 
-            "name": "k40-RealKing", 
+            "name": "k40-RealKing-kernelsu", 
             "repo": "https://github.com/Rohail33/Realking_kernel_sm8250", 
             "branch": "base", 
             "device": "alioth", 
