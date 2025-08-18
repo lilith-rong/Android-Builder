@@ -45,6 +45,6 @@
           "enableKernelSU-next": false,
           "enableSukiSU-Ultra": false,
           "enableCcache": true,
-          "enableLXC": true        
+          "enableLXC": false        
     }
 ]
