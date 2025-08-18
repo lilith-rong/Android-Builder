@@ -82,23 +82,31 @@ jobs:
       CCACHE_DIR: "${{ github.workspace }}/ccache"
     steps:
       # Set swap space
-      - name: 📐 Set swap to 10G
-        uses: pierotofy/set-swap-space@master
+      - name: 📐 Maximize build space & Set swap to 10G
+        uses: easimon/maximize-build-space@master
         with:
-          swap-size-gb: 10
+          root-reserve-mb: 2048
+          temp-reserve-mb: 1024
+          swap-size-mb: 10240
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'		  
 
       # This action checks-out your CONFIGSitory under $GITHUB_WORKSPACE, so your workflow can access it.
       - name: 😄 Checkout
         uses: actions/checkout@v4
         
       # 设置github信息，对patch 有效
-      # - name: Set Git config
-      #   run: |
-      #     git config --global user.name github-actions[bot]
-      #     git config --global user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - name: Set Git config
+        run: |
+          git config --global user.name github-actions[bot]
+          git config --global user.email 41898282+github-actions[bot]@users.noreply.github.com
 
       # Install prerequisites for Ubuntu
       - name: ⭐ Install prerequisites
+
         run: |
           sudo apt-get update
           sudo apt-get install -y curl git ftp lftp wget libarchive-tools ccache python2 python2-dev python3
@@ -108,7 +116,13 @@ jobs:
           sudo apt-get install -y build-essential bc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libfl-dev
           sudo apt-get install -y pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl 
           sudo apt-get install -y zip unzip tar gzip bzip2 rar unrar llvm g++-multilib bison gperf zlib1g-dev automake
-
+      # Cache apt
+      - name: Cache apt dependencies(for linux)
+        if: false
+        uses: awalsh128/cache-apt-pkgs-action@latest 
+        with: 
+          packages: curl git ftp lftp wget libarchive-tools ccache python2 python2-dev python3 pngcrush schedtool dpkg-dev liblz4-tool make optipng maven device-tree-compiler libc6-dev-i386 lib32ncurses5-dev libx11-dev lib32z-dev libgl1-mesa-dev xsltproc libxml2-utils libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools lzop flex tree build-essential bc gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi libssl-dev libfl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl zip unzip tar gzip bzip2 rar unrar llvm g++-multilib bison gperf zlib1g-dev automake
+          execute_install_scripts: true
       # Initialize ccache
       - name: 🚄 Setup ccache
         if: ${{ env.ENABLE_CCACHE == 'true' }}
@@ -128,7 +142,7 @@ jobs:
         env:
           HASH: ${{ steps.hash.outputs.HASH }}
         if: ${{ env.ENABLE_CCACHE == 'true' }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ${{ env.OUT_DIR }}
@@ -368,7 +382,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-Image
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-Image
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image
           if-no-files-found: ignore
           retention-days: 7
@@ -378,7 +392,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-Image.gz
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-Image.gz
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image.gz
           if-no-files-found: ignore
           retention-days: 7
@@ -388,7 +402,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-Image.gz-dtb
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-Image.gz-dtb
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image.gz-dtb
           if-no-files-found: ignore
           retention-days: 7
@@ -398,7 +412,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-dtb
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-dtb
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtb
           if-no-files-found: ignore
           retention-days: 7
@@ -408,7 +422,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-dtbo.img
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-dtbo.img
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/dtbo.img
           if-no-files-found: ignore
           retention-days: 7
@@ -418,7 +432,7 @@ jobs:
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
-          name: ${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}-Output
+          name: ${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}-Output
           path: ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/
           retention-days: 7
 
@@ -427,7 +441,7 @@ jobs:
         env:
           PARAMS: "${{ toJSON(matrix.CONFIG.AnyKernel3) }}"
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
-          ANYKERNEL3_FILE: "${{ env.WORKSPACE }}/AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}"
+          ANYKERNEL3_FILE: "${{ env.WORKSPACE }}/AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}"
         run: |
           if echo -n '${{ env.PARAMS }}' | jq -e 'has("custom")' > /dev/null; then
             CUSTOM_ANYKERNEL3=$(echo -n '${{ env.PARAMS }}' | jq -r ".custom")
@@ -446,6 +460,7 @@ jobs:
 
           if [ -e "${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image.gz-dtb" ]; then
             cp -f ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image.gz-dtb ./AnyKernel3/
+																																											   
           else
             if [ -e "${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image" ]; then
               cp -f ${{ env.OUT_DIR }}/arch/${{ env.ARCH }}/boot/Image ./AnyKernel3/
@@ -461,12 +476,13 @@ jobs:
             fi
           fi
 
+          rm -rf AnyKernel3/.git* AnyKernel3/README.md
           cd AnyKernel3/
           zip -q -r "${{ env.ANYKERNEL3_FILE }}.zip" *
 
       - name: "💾 Upload AnyKernel3 image => (${{ env.BUILD_DATE }})"
         env:
-          ANYKERNEL3_FILE: "AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}"
+          ANYKERNEL3_FILE: "AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}"
         uses: actions/upload-artifact@v4
         if: ${{ env.USE_ANYKERNEL3 == 'true' }}
         with:
@@ -475,11 +491,12 @@ jobs:
 
       - name: 🧧 Create GitHub Release => (${{ env.BUILD_DATE }})
         env:
-          ANYKERNEL3_FILE: "${{ env.WORKSPACE }}/AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.BUILD_DATE }}"
+          ANYKERNEL3_FILE: "${{ env.WORKSPACE }}/AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}"
         continue-on-error: true
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: ${{ env.USE_ANYKERNEL3 == 'true' && env.CONFIRM_RELEASE == 'true' }}
         with:
           tag_name: v${{ env.BUILD_DATE }}.${{ github.run_number }}
           files: "${{ env.ANYKERNEL3_FILE }}.zip"
+          body: "[Kernelname]:仅带ksu [Kernelname]-both:带ksu+LXC docker"
           generate_release_notes: true
