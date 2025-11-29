@@ -18,7 +18,7 @@ jobs:
     steps:
       # This action checks-out your CONFIGSitory under $GITHUB_WORKSPACE, so your workflow can access it.
       - name: 😄 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Match the configuration files in the CONFIGS directory, read the contents and merge them into an array.
       - name: 😆 Generate Matrix
@@ -66,28 +66,26 @@ jobs:
       CONFIRM_RELEASE: ${{ matrix.CONFIG.AnyKernel3.release }}
 
       # Whether to enable KernelSU
-      ENABLE_KERNELSU: ${{ matrix.CONFIG.enableKernelSU }}
-
-      # Whether to enable KernelSU-NEXT
-      ENABLE_KERNELSU_NEXT: ${{ matrix.CONFIG.enableKernelSU-next }}
-
-      # Whether to enable SukiSU-Ultra
-      ENABLE_SUKISU_ULTRA: ${{ matrix.CONFIG.enableSukiSU-Ultra }}
+      ENABLE_KERNELSU: ${{ matrix.CONFIG.KSU.enable }}
+      KERNELSU_VARIANT: ${{ matrix.CONFIG.KSU.Variant }}
+      ENABLE_KERNELSU_ExtPatch: ${{ matrix.CONFIG.KSU.ExtPatch }}
 
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
 
+      # Whether to enable Baseband_Guard
+      ENABLE_BBG: ${{ matrix.CONFIG.enableBBG }}
       # Set output & ccache directory
       OUT_DIR: "${{ github.workspace }}/out"
       CCACHE_DIR: "${{ github.workspace }}/ccache"
     steps:
       # Set swap space
       - name: 📐 Maximize build space & Set swap to 10G
-        uses: easimon/maximize-build-space@master
+        uses: pierotofy/set-swap-space@master
         with:
           root-reserve-mb: 2048
           temp-reserve-mb: 1024
-          swap-size-mb: 10240
+          swap-size-gb: 10
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
@@ -96,13 +94,13 @@ jobs:
 
       # This action checks-out your CONFIGSitory under $GITHUB_WORKSPACE, so your workflow can access it.
       - name: 😄 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       # 设置github信息，对patch 有效
-      - name: Set Git config
+      - name: Set git config
         run: |
-          git config --global user.name github-actions[bot]
-          git config --global user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git config --global user.name ${{ github.actor }}
+          git config --global user.email ${{ github.actor }}@users.noreply.github.com
 
       # Install prerequisites for Ubuntu
       - name: ⭐ Install prerequisites
@@ -147,10 +145,10 @@ jobs:
           path: |
             ${{ env.OUT_DIR }}
             ${{ env.CCACHE_DIR }}
-          key: cache-${{ env.KERNEL_NAME }}-${{env.HASH}}-${{ env.BUILD_DATE }}
+          key: cache-${{ env.KERNEL_NAME }}-${{env.KERNEL_DEVICE}}-${{env.HASH}}-${{ env.BUILD_DATE }}
           restore-keys: |
-            cache-${{ env.KERNEL_NAME }}-${{env.HASH}}-${{ env.BUILD_DATE }}
-            cache-${{ env.KERNEL_NAME }}-${{env.HASH}}-
+            cache-${{ env.KERNEL_NAME }}-${{env.KERNEL_DEVICE}}-${{env.HASH}}-${{ env.BUILD_DATE }}
+            cache-${{ env.KERNEL_NAME }}-${{env.KERNEL_DEVICE}}-${{env.HASH}}-
             cache-${{ env.KERNEL_NAME }}-
 
       - name: 🌟 Clone kernel source => (${{ env.KERNEL_REPO }})
@@ -174,7 +172,7 @@ jobs:
             if echo $toolchain | jq -e 'has("url")' > /dev/null; then
               # If from archive
               toolchain_url=$(echo $toolchain | jq -r ".url")
-              mkdir -p "$toolchain_name"
+              mkdir -p $toolchain_name
 
               # Download archive
               wget "$toolchain_url"
@@ -254,6 +252,42 @@ jobs:
 
           echo "🤔 $args"
 
+      - name: Determine KSU Variant
+        id: determine-ksu-variant
+        if: ${{ env.ENABLE_KERNELSU == 'true' }}
+        run: |
+          input=$(echo "${{ env.KERNELSU_VARIANT }}" | tr '[:upper:]' '[:lower:]')
+          echo "🤔 Selected KernelSU variant: $input"
+          if [ "$input" == "official" ]; then
+            echo "KSU_VARIANT=tiann/KernelSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=v0.9.5" >> $GITHUB_OUTPUT # the last one that support nongki
+            echo "Using Official KernelSU variant."
+          elif [ "$input" == "rksu" ]; then
+            echo "KSU_VARIANT=rsuntk/KernelSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=main" >> $GITHUB_OUTPUT
+            echo "Using RKSU variant."
+          elif [ "$input" == "ycrksu" ]; then
+            echo "KSU_VARIANT=luyanci/KernelSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=main" >> $GITHUB_OUTPUT
+            echo "Using YCRKSU variant."
+          elif [ "$input" == "sukisu" ]; then
+            echo "KSU_VARIANT=SukiSU-Ultra/SukiSU-Ultra" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=nongki" >> $GITHUB_OUTPUT
+          elif [ "$input" == "next" ] || [ "$input" == "ksun" ]; then
+            echo "KSU_VARIANT=KernelSU-Next/KernelSU-Next" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=next" >> $GITHUB_OUTPUT
+            echo "Using KernelSU-Next variant."
+          elif [ "$input" == "wild" ]; then
+            echo "KSU_VARIANT=WildKernels/Wild_KSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=wild" >> $GITHUB_OUTPUT
+            echo "Using WildSU variant."
+          else
+            # fallback to official
+            echo "KSU_VARIANT=tiann/KernelSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=v0.9.5" >> $GITHUB_OUTPUT
+            echo "Using Official KernelSU variant as fallback."
+          fi
+
       - name: 😋 Setup KernelSU
         working-directory: ${{ env.KERNEL_NAME }}
         env:
@@ -269,57 +303,17 @@ jobs:
           fi
 
           # Apply new KernelSU patches
-          # curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-          # Change to rsuntk KernelSU or ShirkNeko KernelSU的susfs-dev分支
-          curl -LSs "https://raw.githubusercontent.com/rsuntk/KernelSU/main/kernel/setup.sh" | bash -s susfs-main
-          # curl -LSs "https://raw.githubusercontent.com/ShirkNeko/KernelSU/main/kernel/setup.sh" | bash -s susfs-stable
+          curl -LSs "https://raw.githubusercontent.com/${{ steps.determine-ksu-variant.outputs.KSU_VARIANT }}/${{ steps.determine-ksu-variant.outputs.KSU_BRANCH }}/kernel/setup.sh" | bash -s ${{ steps.determine-ksu-variant.outputs.KSU_BRANCH }}
 
           echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-
-          cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-
-      - name: 😋 Setup KernelSU-NEXT
-        working-directory: ${{ env.KERNEL_NAME }}
-        env:
-          ARCH: ${{ steps.generate-args.outputs.ARCH }}
-        if: ${{ env.ENABLE_KERNELSU_NEXT == 'true' }}
-        run: |
-          # Delete old KernelSU
-          if [ -d "./KernelSU-Next" ]; then
-            rm -rf "./KernelSU-Next"
+          echo -e "CONFIG_KSU=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          if [ "${{ steps.determine-ksu-variant.outputs.KSU_VARIANT }}" == "KernelSU-Next/KernelSU-Next" ] || [ "${{ steps.determine-ksu-variant.outputs.KSU_VARIANT }}" == "WildKernels/Wild_KSU" ]; then
+            echo -e "CONFIG_KSU_KPROBES_HOOK=n" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+          else
+            echo -e "CONFIG_KSU_MANUAL_HOOK=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
           fi
-          if [ -d "./drivers/kernelsu" ]; then
-            rm -rf "./drivers/kernelsu"
-          fi
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
-
-          echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          
-          cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-
-      - name: 😋 Setup SukiSU-Ultra
-        working-directory: ${{ env.KERNEL_NAME }}
-        env:
-          ARCH: ${{ steps.generate-args.outputs.ARCH }}
-        if: ${{ env.ENABLE_SUKISU_ULTRA == 'true' }}
-        run: |
-          # Delete old KernelSU
-          if [ -d "./KernelSU-Next" ]; then
-            rm -rf "./KernelSU-Next"
-          fi
-          if [ -d "./drivers/kernelsu" ]; then
-            rm -rf "./drivers/kernelsu"
-          fi
-          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
-
-          echo -e "CONFIG_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          echo -e "CONFIG_HAVE_KPROBES=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          echo -e "CONFIG_KPROBE_EVENTS=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
-          
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
       - name: 😋 Setup LXC docker
@@ -365,6 +359,15 @@ jobs:
             echo "🎖️ Apply xt_qtaguid.patch"
           fi
 
+      - name: 😋 Setup Baseband_Guard
+        env:
+          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+        working-directory: ${{ env.KERNEL_NAME }}
+        if: ${{ env.ENABLE_BBG == 'true' }}
+        run: |
+          wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s main
+          echo -e "CONFIG_BBG=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
+
       - name: 👍 Start building the kernel
         working-directory: ${{ env.KERNEL_NAME }}
         env:
@@ -378,7 +381,7 @@ jobs:
           # tree ${{ env.OUT_DIR }}
 
       - name: 💛 Upload Image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -388,7 +391,7 @@ jobs:
           retention-days: 7
 
       - name: 💙 Upload Image.gz
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -398,7 +401,7 @@ jobs:
           retention-days: 7
 
       - name: 💙 Upload Image.gz-dtb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -408,7 +411,7 @@ jobs:
           retention-days: 7
 
       - name: 💜 Upload dtb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -418,7 +421,7 @@ jobs:
           retention-days: 7
 
       - name: ❤️ Upload dtbo.img
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -428,7 +431,7 @@ jobs:
           retention-days: 7
 
       - name: ☢️ Upload output directory
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         env:
           ARCH: ${{ steps.generate-args.outputs.ARCH }}
         with:
@@ -482,7 +485,7 @@ jobs:
       - name: "💾 Upload AnyKernel3 image => (${{ env.BUILD_DATE }})"
         env:
           ANYKERNEL3_FILE: "AnyKernel3-${{ env.KERNEL_NAME }}-${{ env.KERNEL_DEVICE }}-${{ env.BUILD_DATE }}"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: ${{ env.USE_ANYKERNEL3 == 'true' }}
         with:
           name: "${{ env.ANYKERNEL3_FILE }}"
