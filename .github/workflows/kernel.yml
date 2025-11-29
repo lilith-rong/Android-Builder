@@ -73,8 +73,12 @@ jobs:
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
 
+      # Whether to enable SUSFS 暂未启用
+      # ENABLE_BBG: ${{ matrix.CONFIG.enableSUSFS }}
+
       # Whether to enable Baseband_Guard
       ENABLE_BBG: ${{ matrix.CONFIG.enableBBG }}
+      
       # Set output & ccache directory
       OUT_DIR: "${{ github.workspace }}/out"
       CCACHE_DIR: "${{ github.workspace }}/ccache"
