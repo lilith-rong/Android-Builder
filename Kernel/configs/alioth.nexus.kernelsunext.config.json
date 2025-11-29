@@ -41,10 +41,13 @@
               "branch": "k40"
             }
           },
-          "enableKernelSU": false, 
-          "enableKernelSU-next": true, 
-          "enableSukiSU-Ultra": false,
-          "enableCcache": true,
-          "enableLXC": true        
+          "KSU": {
+            "enable": true,
+            "Variant": "next"
+          },
+          "enableSUSFS": true,
+          "enableLXC": true,
+          "enableBBG": true, 
+          "enableCcache": true        
     }
 ]
