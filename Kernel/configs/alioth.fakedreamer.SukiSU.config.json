@@ -1,7 +1,7 @@
 [
     {
         "kernelSource": { 
-            "name": "k40-RealKing-SukiSU", 
+            "name": "k40-fakedreamer-SukiSU", 
             "repo": "https://github.com/re-noroi/kernel_sm8250", 
             "branch": "base", 
             "device": "alioth", 
@@ -43,6 +43,7 @@
           },
           "KSU": {
             "enable": true,
+            "ExtPatch": true,
             "Variant": "sukisu"
           },
           "enableSUSFS": true,

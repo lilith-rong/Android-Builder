@@ -43,6 +43,7 @@
           },
           "KSU": {
             "enable": true,
+            "ExtPatch": true,
             "Variant": "sukisu"
           },
           "enableSUSFS": true,
