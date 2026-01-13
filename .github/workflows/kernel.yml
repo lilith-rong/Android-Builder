@@ -68,16 +68,15 @@ jobs:
       # Whether to enable KernelSU
       ENABLE_KERNELSU: ${{ matrix.CONFIG.KSU.enable }}
       KERNELSU_VARIANT: ${{ matrix.CONFIG.KSU.Variant }}
-      ENABLE_KERNELSU_ExtPatch: ${{ matrix.CONFIG.KSU.ExtPatch }}
+      # Whether to enable SUSFS 暂未启用
+      ENABLE_SUSFS: ${{ matrix.CONFIG.KSU.enableSUSFS }}
+      # Whether to enable KPM 暂未启用
+      ENABLE_KPM: ${{ matrix.CONFIG.KSU.enableKPM }}
+      # Whether to enable Baseband_Guard
+      ENABLE_BBG: ${{ matrix.CONFIG.KSU.enableBBG }}
 
       # Whether to enable LXC docker
       ENABLE_LXC: ${{ matrix.CONFIG.enableLXC }}
-
-      # Whether to enable SUSFS 暂未启用
-      # ENABLE_BBG: ${{ matrix.CONFIG.enableSUSFS }}
-
-      # Whether to enable Baseband_Guard
-      ENABLE_BBG: ${{ matrix.CONFIG.enableBBG }}
       
       # Set output & ccache directory
       OUT_DIR: "${{ github.workspace }}/out"
@@ -266,17 +265,17 @@ jobs:
             echo "KSU_VARIANT=tiann/KernelSU" >> $GITHUB_OUTPUT
             echo "KSU_BRANCH=v0.9.5" >> $GITHUB_OUTPUT # the last one that support nongki
             echo "Using Official KernelSU variant."
-          elif [ "$input" == "rksu" ]; then
-            echo "KSU_VARIANT=rsuntk/KernelSU" >> $GITHUB_OUTPUT
-            echo "KSU_BRANCH=main" >> $GITHUB_OUTPUT
-            echo "Using RKSU variant."
           elif [ "$input" == "ycrksu" ]; then
             echo "KSU_VARIANT=luyanci/KernelSU" >> $GITHUB_OUTPUT
             echo "KSU_BRANCH=main" >> $GITHUB_OUTPUT
             echo "Using YCRKSU variant."
+          elif [ "$input" == "rksu" ]; then
+            echo "KSU_VARIANT=rsuntk/KernelSU" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=susfs-rksu-master" >> $GITHUB_OUTPUT
+            echo "Using RKSU variant."
           elif [ "$input" == "sukisu" ]; then
             echo "KSU_VARIANT=SukiSU-Ultra/SukiSU-Ultra" >> $GITHUB_OUTPUT
-            echo "KSU_BRANCH=nongki" >> $GITHUB_OUTPUT
+            echo "KSU_BRANCH=susfs-main" >> $GITHUB_OUTPUT
           elif [ "$input" == "next" ] || [ "$input" == "ksun" ]; then
             echo "KSU_VARIANT=KernelSU-Next/KernelSU-Next" >> $GITHUB_OUTPUT
             echo "KSU_BRANCH=next" >> $GITHUB_OUTPUT
@@ -320,13 +319,30 @@ jobs:
           fi
           cat arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
-      - name: 😋 Setup KernelSU Ext Patch
+#      - name: 😋 Setup SUSFS
+#        env:
+#          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+#        working-directory: ${{ env.KERNEL_NAME }}
+#        if: ${{ env.ENABLE_SUSFS == 'true' }}
+#        run: 
+#
+#        # KPM模块暂时仅有杂鱼管理器支持
+#      - name: 😋 Setup KPM
+#        env:
+#          ARCH: ${{ steps.generate-args.outputs.ARCH }}
+#        working-directory: ${{ env.KERNEL_NAME }}
+#        if: ${{ env.ENABLE_KPM == 'true' && env.KERNELSU_VARIANT == 'sukisu' }}
+#        run: 
+
+
+      - name: 😋 Setup Baseband_Guard
+        env:
+          ARCH: ${{ steps.generate-args.outputs.ARCH }}
         working-directory: ${{ env.KERNEL_NAME }}
-        if: ${{ env.ENABLE_KERNELSU == 'true' &&       env.ENABLE_KERNELSU_ExtPatch == 'true'}}
+        if: ${{ env.ENABLE_BBG == 'true' }}
         run: |
-          wget -Opatcher https://github.com/luyanci/Android-kernel-utils/releases/download/v0.1/patcher-2204
-          chmod +x patcher
-          ./patcher
+          wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s main
+          echo -e "CONFIG_BBG=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
       - name: 😋 Setup LXC docker
         working-directory: ${{ env.KERNEL_NAME }}
@@ -370,15 +386,6 @@ jobs:
             git am -s < ${{ env.WORKSPACE }}/LXC/Patches/xt_qtaguid.patch
             echo "🎖️ Apply xt_qtaguid.patch"
           fi
-
-      - name: 😋 Setup Baseband_Guard
-        env:
-          ARCH: ${{ steps.generate-args.outputs.ARCH }}
-        working-directory: ${{ env.KERNEL_NAME }}
-        if: ${{ env.ENABLE_BBG == 'true' }}
-        run: |
-          wget -O- https://github.com/vc-teahouse/Baseband-guard/raw/main/setup.sh | bash -s main
-          echo -e "CONFIG_BBG=y" >> arch/${{ env.ARCH }}/configs/${{ env.KERNEL_DEFCONFIG_PATH }}
 
       - name: 👍 Start building the kernel
         working-directory: ${{ env.KERNEL_NAME }}
